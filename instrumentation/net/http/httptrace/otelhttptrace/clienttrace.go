@@ -11,11 +11,13 @@ import (
 	"strings"
 	"sync"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/internal/semconv"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/internal/semconv"
 )
 
 // ScopeName is the instrumentation scope name.
@@ -41,6 +43,8 @@ var hookMap = map[string]string{
 	"http.connect": "http.getconn",
 	"http.tls":     "http.getconn",
 }
+
+var noopSpanInstance trace.Span = noop.Span{}
 
 func parentHook(hook string) string {
 	if strings.HasPrefix(hook, "http.connect") {
@@ -264,7 +268,7 @@ func (ct *clientTracer) span(hook string) trace.Span {
 	if ctx, ok := ct.activeHooks[hook]; ok {
 		return trace.SpanFromContext(ctx)
 	}
-	return nil
+	return noopSpanInstance
 }
 
 func (ct *clientTracer) getConn(host string) {
@@ -327,7 +331,7 @@ func (ct *clientTracer) tlsHandshakeDone(_ tls.ConnectionState, err error) {
 }
 
 func (ct *clientTracer) wroteHeaderField(k string, v []string) {
-	if ct.useSpans && ct.span("http.headers") == nil {
+	if ct.useSpans && ct.span("http.headers") == noopSpanInstance {
 		ct.start("http.headers", "http.headers")
 	}
 	if !ct.addHeaders {
@@ -342,7 +346,7 @@ func (ct *clientTracer) wroteHeaderField(k string, v []string) {
 }
 
 func (ct *clientTracer) wroteHeaders() {
-	if ct.useSpans && ct.span("http.headers") != nil {
+	if ct.useSpans && ct.span("http.headers") != noopSpanInstance {
 		ct.end("http.headers", nil)
 	}
 	ct.start("http.send", "http.send")
