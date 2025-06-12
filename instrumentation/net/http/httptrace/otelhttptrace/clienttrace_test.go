@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptrace"
+	"testing"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
@@ -31,4 +32,11 @@ func ExampleNewClientTrace() {
 	defer resp.Body.Close()
 
 	fmt.Println(resp.Status)
+}
+
+func TestClient_NoHookContext(t *testing.T) {
+	t.Run("Got100Continue", func(t *testing.T) {
+		trace := NewClientTrace(context.Background())
+		trace.Got100Continue()
+	})
 }
